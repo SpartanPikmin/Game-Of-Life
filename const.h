@@ -9,6 +9,9 @@
 const int SCREEN_WIDTH = 100;
 const int SCREEN_HIGHT = 100;
 
-const int ARRAY_SIZE = 100;
+const int ARRAY_SIZE = 10;
+
+#define CELLCOUNT (ARRAY_SIZE*ARRAY_SIZE)
+#define SIZE (CELLCOUNT*sizeof(int))
 
 #endif
