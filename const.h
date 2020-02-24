@@ -11,6 +11,12 @@ const int SCREEN_HIGHT = 100;
 
 const int ARRAY_SIZE = 10;
 
+#define ICOLS 30
+#define IROWS LINES
+
+#define RMAX (rows-1);
+#define CMAX (cols-1);
+
 #define CELLCOUNT (ARRAY_SIZE*ARRAY_SIZE)
 #define SIZE (CELLCOUNT*sizeof(int))
 
