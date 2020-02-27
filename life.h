@@ -4,11 +4,12 @@
 #include <stdlib.h>
 #include <string.h> 
 #include <stdlib.h>
-#include "const.h"
 #include <locale.h>
 #include <time.h>
+#include <unistd.h>
+#include <pthread.h>
 
-int main();
+#include "const.h"
 
 //Pointer
 int coord(int x, int y);
@@ -16,7 +17,7 @@ void setcellAlive(int x,int y);
 void setcellAliveT(int x, int y);
 void setcellKillT(int x, int y);
 
-void copyCells();
+void copyCells(void);
 void copyTemp();
 
 void setcellKill(int x, int y);
@@ -29,10 +30,11 @@ void displaycells();
 int neighbours(int x, int y);
 int checkAlive(int x, int y);
 void freecells();
-//WINDOW *createwin(int height, int width, int begy, int begx);
-
-
 void status();
+int convertx(int);
+int converty(int);
+void load_file(char*, int,int);
+
 
 void nextGeneration();
 void testGen();
@@ -40,15 +42,4 @@ void testGen();
 void testNeighbors();
 
 
-static int *cells = NULL;
-static int *temp = NULL;
-
-static int ticksize = 1;
-
-static int cols = 0;
-static int rows = 0;
-
-
-
 #endif //life_h
-
