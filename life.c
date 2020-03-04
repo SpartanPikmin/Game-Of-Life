@@ -101,7 +101,7 @@ int main(int argc, char *argv[]){
     }
 
 
-    displaycells();
+    //displaycells();
     //printf("serial code\n");
     //nextGeneration();
     //displaycells();
@@ -244,12 +244,14 @@ void init(){
 
   cells = malloc(SIZE);
   if(cells == NULL){
+    printf("cells doesn't create %i, cols %i rows %i cellcount %i what size cals to %i\n", SIZE, cols, rows, CELLCOUNT, (CELLCOUNT * sizeof(int)));
     exit(1);
   }
   memset(cells, 0, SIZE);
 
   temp = malloc(SIZE);
     if(temp == NULL){
+      printf("temp doesn't create %i\n", SIZE);
       exit(1);
     }      
   memset(temp, 0, SIZE);
@@ -265,7 +267,6 @@ void freecells(){
 }
 
 int neighbours(int x, int y){
-
   int count = 0;
   if(y < (cols -1)){
     //printf("count 1\n");
@@ -299,36 +300,6 @@ int neighbours(int x, int y){
       count += checkAlive(convertx(x-1), converty(y+1));
     }
   }
-
- // printf("count %i\n", count);
-  
-  /*
-  int count = 0;
-  if(y < (cols -1)){
-    count += checkAlive(convertx(x),converty(y+1));
-  }
-  if(y > 0){
-    count += checkAlive(convertx(x),converty(y-1));
-  }
-  if(x < (rows -1)){
-    count += checkAlive(convertx(x+1), converty(y));
-    if(y > 0){
-      count += checkAlive(convertx(x+1), converty(y-1));      
-    }
-    if(y < (cols -1) ){
-      count += checkAlive(convertx(x+1), converty(y+1));
-    }
-  }
-  if(x > 0){
-    count += checkAlive(convertx(x-1), converty(y));
-    if(y > 0){
-      count += checkAlive(convertx(x-1), converty(y-1));
-    }
-    if(y < (cols-1) ){
-      count += checkAlive(convertx(x-1), converty(y+1));
-    }
-  }
-  */
   return count;
 }
 
@@ -374,7 +345,6 @@ void testNeighbors(){
 
 void *threadNextGen(void *a){
   int id = *(int *) a;
-  int killed = 0;
   int i;
   //printf("start\n");
 
@@ -387,33 +357,28 @@ void *threadNextGen(void *a){
     int x,y,neigh;
     for(x = id; x < rows; x+= NUM_THREADS){
       for(y = 0; y < cols; y++){
-       // printf("x %i, y %i\n", x ,y);
         neigh = neighbours(x,y);
-        if(neigh == 3){
-          //printf("its a live\n");
-        }
-
         if(neigh < 2 || neigh > 3){
-          //printf("%i,%i,kill\n",x,y);
-         // printf("its dead jim\n");
-          killed++;
+          if(Verbose > 1){
+          printf("%i,%i,kill\n",x,y);
+          printf("its dead jim\n");
+          }  
           setcellKillT(x,y);
         }
         if(neigh == 3){
-          //printf("%i,%i,alive\n",x,y);
+          if(Verbose > 1){
+          printf("%i,%i,alive\n",x,y);
+          printf("its a live and set\n");
+          }
           setcellAliveT(x,y);
-          //printf("its a live and set\n");
         }
       }
     }
-    //printf("\n");
-    //printf("thread %i has arived 2nd barrier\n", id);
     pthread_barrier_wait(&barrier);
 
     if(id == 0){
       
       copyTemp();
-     // printf("copy temp\n");
       if(Verbose > 0){
         displaycells();
       }
