@@ -8,41 +8,29 @@
 #include <time.h>
 #include <unistd.h>
 #include <pthread.h>
-
+#include <getopt.h>
 #include "const.h"
 
-//Pointer
-int coord(int x, int y);
-void setcellAlive(int x,int y);
-void setcellAliveT(int x, int y);
-void setcellKillT(int x, int y);
-
+long coord(long x, long y);
+void setcellAlive(long x,long y);
+void setcellAliveT(long x, long y);
+void setcellKillT(long x, long y);
 void copyCells(void);
-void copyTemp();
-
-void setcellKill(int x, int y);
-int getcell(int x, int y);
-int checkAlive(int x, int y);
-
-
-int getPopulation();
-void init();
-void initcurses();
-void randcell();
-void displaycells();
-int neighbours(int x, int y);
-
-void freecells();
-void status();
-int convertx(int);
-int converty(int);
-void load_file(char*, int,int);
-
-
-void nextGeneration();
-void testGen();
-
-void testNeighbors();
-
-
+void copyTemp(void);
+void setcellKill(long x, long y);
+int getcell(long x, long y);
+int checkAlive(long x, long y);
+int getPopulation(void);
+void init(void);
+void randcell(void);
+void displaycells(void);
+int neighbours(long x, long y);
+void freecells(void);
+void status(void);
+long convertx(long);
+long converty(long);
+void load_file(char*, long,long);
+void nextGeneration(void);
+void testGen(void);
+void testNeighbors(void);
 #endif //life_h

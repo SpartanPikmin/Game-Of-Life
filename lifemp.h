@@ -11,22 +11,28 @@
 
 #include "const.h"
 
-int coord(int x, int y);
-void setcellAlive(int x,int y);
-void setcellAliveT(int x, int y);
-void setcellKillT(int x, int y);
-void load_file(char*, int,int);
-void mpNextGen();
+#ifndef CELL
+# define CELL uint8_t
+# define UNITS long
+#endif // CELL
 
+UNITS coord(UNITS x, UNITS y);
+void setcellAlive(UNITS x,UNITS y);
+void setcellAliveT(UNITS x, UNITS y);
+void setcellKillT(UNITS x, UNITS y);
+void load_file(char*, UNITS,UNITS);
+void mpNextGen(void);
 void copyCells(void);
-void copyTemp();
-void displaycells();
-void setcellKill(int x, int y);
-int getcell(int x, int y);
-int checkAlive(int x, int y);
-void init();
-void freecells();
-int neighbours(int x, int y);
+void copyTemp(void);
+long convertx(long);
+long converty(long);
+void displaycells(void);
+void setcellKill(UNITS x, UNITS y);
+int getcell(UNITS x, UNITS y);
+int checkAlive(UNITS x, UNITS y);
+void init(void);
+void freecells(void);
+int neighbours(UNITS x, UNITS y);
 
 
 #endif

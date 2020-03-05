@@ -1,24 +1,34 @@
+#include <stdint.h>
+
 #include "life.h"
 
 static void *threadNextGen(void *);
 
-static pthread_barrier_t barrier;
+pthread_barrier_t barrier;
 
-static int *cells = NULL;
-static int *temp = NULL;
+#ifndef CELL
+# define CELL uint8_t
+#endif // CELL
+
+//static unsigned long *cells = NULL;
+static CELL *cells = NULL;
+//static unsigned long *temp = NULL;
+static CELL *temp = NULL;
 
 int ticks = 1;
 
 int created = false;
 
-int cols = 0;
-int rows = 0;
+long cols = 0;
+long rows = 0;
 
 int NUM_THREADS;
 
-int CELLCOUNT;
-int SIZE;
+unsigned long CELLCOUNT;
+unsigned long SIZE;
 int Verbose = 0;
+
+clock_t start, world_gen,file_time, end;
   
 struct shapefile{
   char *fileName;
@@ -41,16 +51,16 @@ int main(int argc, char *argv[]){
   int file_loc = 0;
   int fx = 0, fy = 0;
   char *file = NULL;
-  char stop;
   int j;
   struct shapefile filearray[10];
+  start = clock();
   while((opt = getopt(argc, argv, "c:r:t:n:x:y:f:v")) != -1 ){
       switch(opt){
         case'c':
-          cols = (int) strtol(optarg, NULL,10);
+          cols = strtol(optarg, NULL,10);
           break;
         case'r':
-          rows = (int) strtol(optarg, NULL,10);
+          rows = strtol(optarg, NULL,10);
           break;
         case't':
           ticks = (int) strtol(optarg, NULL,10);
@@ -81,25 +91,31 @@ int main(int argc, char *argv[]){
 
   //printf("%i %i %i %i\n\n", cols, rows, ticks, NUM_THREADS);
 
-  CELLCOUNT = (cols * rows);
-  SIZE = (CELLCOUNT * sizeof(int));
+  CELLCOUNT = ((long)cols * (long)rows);
+  SIZE = (CELLCOUNT * sizeof(CELL));
+  if(Verbose > 1){
+    printf("cellcount %lu size %li %lu rows %li cols %li, sizeof cell %lu\n"
+    , CELLCOUNT, (rows * cols) ,SIZE, rows, cols, (unsigned long) sizeof(CELL));
+  }
+  
 
     //displaycells();
     //testNeighbors();
     //testGen();
-    if(!created){
+
       if(Verbose > 0){
         printf("creating world\n");
       }
       
       init();
-      created = true;
-    }
+      world_gen = clock();
     for(j = 0; j < file_loc; j++){
-      printf("loading file at location %i\n", j);
+      if(Verbose > 1){
+        printf("loading file at location %i\n", j);
+      }
       load_file(filearray[j].fileName,filearray[j].x,filearray[j].y);
     }
-
+    file_time = clock();
 
     //displaycells();
     //printf("serial code\n");
@@ -125,73 +141,87 @@ int main(int argc, char *argv[]){
     }
     */
   //NUM_THREADS = 10; //atoi(argv[1]);
+  {
   pthread_t threads[NUM_THREADS];
   int i;
   int ids[NUM_THREADS];
 
-  pthread_attr_t attr;
-
+  //thread_time = clock();
   memset(ids, 0, NUM_THREADS * sizeof(pthread_t));
   pthread_barrier_init(&barrier, NULL, NUM_THREADS);
 
-  pthread_attr_init(&attr);
-  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+  //  pthread_attr_init(&attr);
+  //pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
   for (i = 0; i < NUM_THREADS; i++) {
     ids[i] = i;
-    pthread_create(&threads[i], &attr, threadNextGen, &ids[i]);
+    pthread_create(&threads[i], NULL, threadNextGen, &ids[i]);
   }
   for(i = 0; i < NUM_THREADS; i ++){
     pthread_join(threads[i],NULL);
    // printf("joined %i\n", i);
   }
+  
 
   //printf("test\n");
-  //freecells();
-
+  freecells();
+  end = clock();
+  printf("start\tworld gen\tfile place\tthread time\n");
+  printf("%f\t%f\t%f\t%f\n",(((double)(end-start))/CLOCKS_PER_SEC), (((double)(world_gen-start))/CLOCKS_PER_SEC)
+                            , (((double)(file_time-world_gen))/CLOCKS_PER_SEC), (((double)(end-file_time))/CLOCKS_PER_SEC));
   pthread_exit(EXIT_SUCCESS);
+  }
 
   //printf("hello world\n");
+  /*
+  end = clock();
+  printf("start\tworld gen\tfile place\tthread time\n");
+  printf("%f\t%f\t%f\t%f\n",(((double)(start - end))/CLOCKS_PER_SEC), (((double)(world_gen - end))/CLOCKS_PER_SEC)
+                            , (((double)(file_time - end))/CLOCKS_PER_SEC), (((double)(thread_time - end))/CLOCKS_PER_SEC));
+  */
   return 0;
 }
 
-int coord(int x, int y){
+long coord(long x, long y){
   return ((y)*cols+(x));
 }
-void setcellAlive(int x,int y){
+
+void setcellAlive(long x,long y){
   (cells[coord((x),(y))] = 1);
   //printf("cell x %i y %i is alive\n", x, y);
   //displaycells();
 }
-void setcellKill(int x, int y){
+
+void setcellKill(long x, long y){
   (cells[coord((x),(y))] = 0);
   //printf("cell x %i y %i is dead\n", x, y);
   //sdisplaycells();
 }
 
-void setcellAliveT(int x, int y){
-  (temp[coord((x),(y))] = 1);
+void setcellAliveT(long x, long y){
+  //(temp[coord((x),(y))] = 1);
+  (temp[((y)*cols+(x))] = 1);
 }
 
-void setcellKillT(int x, int y){
-  (temp[coord((x),(y))] = 0);
+void setcellKillT(long x, long y){
+ // (temp[coord((x),(y))] = 0);
+  (temp[((y)*cols+(x))] = 0);
 }
 
 void copyCells(void){
   memcpy(temp, cells, SIZE);
 }
 
-void copyTemp(){
+void copyTemp(void){
   //printf("hello\n");
   memcpy(cells,temp,SIZE);
 }
 
-
-int getcell(int x, int y){
+int getcell(long x, long y){
   return (cells[coord(x,y)]);
 }
 
-int checkAlive(int x, int y){
+int checkAlive(long x, long y){
   if(getcell(x,y) == 1){
     return true;
   }
@@ -200,7 +230,7 @@ int checkAlive(int x, int y){
   }
 }
 
-int getPopulation(){
+int getPopulation(void){
   int i,j;
   int population = 0;
   for (i = 0; i <= rows; i++){
@@ -213,7 +243,7 @@ int getPopulation(){
   return population;
 }
 
-void randcell(){
+void randcell(void){
   int i;
   for(i = 0; i<=1000; i++){
     int x = rand() % rows;
@@ -222,14 +252,17 @@ void randcell(){
   }
 }
 
-void displaycells(){
-  int i,j;
+void displaycells(void){
+  long i,j;
+  for (j = 0; j < cols; j++)
+    printf("%li", j%10);
+  printf("\n");
   for (i = 0; i < rows; i++) {
-          //printf("%i: ", i);
+          printf("%li: ", i);
           for (j = 0; j < cols; j++) {
             if(Verbose > 1 ){
               if (getcell(i,j) != 0 && getcell(i,j) != 1) {
-                  fprintf(stderr, "there is a corruption at %i %i\n", i, j);
+                  fprintf(stderr, "there is a corruption at %li %li\n", i, j);
               }
               }
               
@@ -240,18 +273,19 @@ void displaycells(){
       printf("\n");
 }
 
-void init(){
+void init(void){
 
   cells = malloc(SIZE);
   if(cells == NULL){
-    printf("cells doesn't create %i, cols %i rows %i cellcount %i what size cals to %i\n", SIZE, cols, rows, CELLCOUNT, (CELLCOUNT * sizeof(int)));
+    printf("cells doesn't create %lu, cols %lu rows %lu cellcount %lu what size cals to %lu\n"
+	   , SIZE, cols, rows, CELLCOUNT, (CELLCOUNT * sizeof(int)));
     exit(1);
   }
   memset(cells, 0, SIZE);
 
   temp = malloc(SIZE);
     if(temp == NULL){
-      printf("temp doesn't create %i\n", SIZE);
+      printf("temp doesn't create %lu\n", SIZE);
       exit(1);
     }      
   memset(temp, 0, SIZE);
@@ -259,14 +293,14 @@ void init(){
   //displaycells();
 }
 
-void freecells(){
-  printf("free\n");
+void freecells(void){
+  //printf("free\n");
   free(cells);
   free(temp);
 
 }
 
-int neighbours(int x, int y){
+int neighbours(long x, long y){
   int count = 0;
   if(y < (cols -1)){
     //printf("count 1\n");
@@ -303,8 +337,9 @@ int neighbours(int x, int y){
   return count;
 }
 
-void nextGeneration(){
-  int x,y,neigh;
+void nextGeneration(void){
+  long x,y;
+  int neigh;
 
   copyCells();
   for(x = 0; x < rows; x++){
@@ -324,7 +359,7 @@ void nextGeneration(){
   copyTemp();
 }
 
-void testGen(){
+void testGen(void){
   setcellAlive(2,4);
   setcellAlive(3,2);
   setcellAlive(3,4);
@@ -332,7 +367,7 @@ void testGen(){
   setcellAlive(4,3);
 }
 
-void testNeighbors(){
+void testNeighbors(void){
   setcellAlive(3,3);
   setcellAlive(3,2);
   setcellAlive(3,4);
@@ -354,20 +389,22 @@ void *threadNextGen(void *a){
     }
    // printf("thread %i has arived first barrier\n", id);
     pthread_barrier_wait(&barrier);
-    int x,y,neigh;
+    {long x;
+    long y;
+    int neigh;
     for(x = id; x < rows; x+= NUM_THREADS){
       for(y = 0; y < cols; y++){
         neigh = neighbours(x,y);
         if(neigh < 2 || neigh > 3){
           if(Verbose > 1){
-          printf("%i,%i,kill\n",x,y);
+          printf("%li,%li,kill\n",x,y);
           printf("its dead jim\n");
           }  
           setcellKillT(x,y);
         }
         if(neigh == 3){
           if(Verbose > 1){
-          printf("%i,%i,alive\n",x,y);
+          printf("%li,%li,alive\n",x,y);
           printf("its a live and set\n");
           }
           setcellAliveT(x,y);
@@ -385,12 +422,13 @@ void *threadNextGen(void *a){
       
     }
   }
+  }
   //printf("ending now\n");
   //printf("thread %i has arived to the end\n", id);
   pthread_exit(EXIT_SUCCESS);
 }
 
-void load_file(char* file, int x, int y){
+void load_file(char* file, long x, long y){
   /*
   if(!created){
    printf("creating world\n");
@@ -414,8 +452,8 @@ void load_file(char* file, int x, int y){
   }
   else{
    // printf("in else\n");
-    int curx = x;
-    int cury = y;
+    long curx = x;
+    long cury = y;
 
     while(fgets(str, sizeof(str),iFile) != NULL){
       //printf("loop\n");
@@ -432,7 +470,7 @@ void load_file(char* file, int x, int y){
             break;
           case ' ':
           case '.':
-            //printf("thing\n");
+           // printf("thing\n");
             setcellKill(curx,cury);
             //printf("cell %i %i value %i dead\n", curx,cury, checkAlive(curx,curx));
             break;
@@ -456,8 +494,8 @@ void load_file(char* file, int x, int y){
 
 }
 
-int convertx(int x){
-  int new_x = x;
+long convertx(long x){
+  long new_x = x;
 
   if(x < 0){
     new_x = rows - 1;
@@ -468,8 +506,8 @@ int convertx(int x){
   return new_x;
 }
 
-int converty(int y){
-  int new_y = y;
+long converty(long y){
+  long new_y = y;
 
   if(y < 0){
     new_y = cols - 1;

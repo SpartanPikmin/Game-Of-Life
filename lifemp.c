@@ -1,18 +1,25 @@
 #include "lifemp.h"
 
-static int *cells = NULL;
-static int *temp = NULL;
+#ifndef CELL
+# define CELL uint8_t
+# define UNITS long
+#endif // CELL
+
+static CELL *cells = NULL;
+static CELL *temp = NULL;
 
 int ticks = 1;
 
-int cols = 0;
-int rows = 0;
+UNITS cols = 0;
+UNITS rows = 0;
 
 int NUM_THREADS;
 
-int CELLCOUNT;
-int SIZE;
+UNITS CELLCOUNT;
+UNITS SIZE;
 int Verbose = 0;
+
+clock_t start, world_gen,file_time, end;
   
 struct shapefile{
   char *fileName;
@@ -35,16 +42,16 @@ int main(int argc, char *argv[]){
   int file_loc = 0;
   int fx = 0, fy = 0;
   char *file = NULL;
-  char stop;
   int j;
   struct shapefile filearray[10];
+  start = clock();
   while((opt = getopt(argc, argv, "c:r:t:n:x:y:f:v")) != -1 ){
       switch(opt){
         case'c':
-          cols = (int) strtol(optarg, NULL,10);
+          cols = strtol(optarg, NULL,10);
           break;
         case'r':
-          rows = (int) strtol(optarg, NULL,10);
+          rows = strtol(optarg, NULL,10);
           break;
         case't':
           ticks = (int) strtol(optarg, NULL,10);
@@ -73,35 +80,66 @@ int main(int argc, char *argv[]){
           }
   }
   if(Verbose > 0){
-    printf("%i %i %i %i\n\n", cols, rows, ticks, NUM_THREADS);
+    printf("%li %li %i %i\n\n", cols, rows, ticks, NUM_THREADS);
   }
 
   CELLCOUNT = (cols * rows);
-  SIZE = (CELLCOUNT * sizeof(int));
+  SIZE = (CELLCOUNT * sizeof(CELL));
   if(Verbose > 0){
     printf("creating world\n");
     }   
   init();
+  world_gen = clock();
   for(j = 0; j < file_loc; j++){
-    printf("loading file at location %i\n", j);
+    if(Verbose > 1){
+      printf("loading file at location %i\n", j);
+    } 
     load_file(filearray[j].fileName,filearray[j].x,filearray[j].y);
   }
+  file_time = clock();
   //displaycells();
 
   //printf("seting numbers\n");
   omp_set_num_threads(NUM_THREADS);
   //printf("entering method\n");
   mpNextGen();
-    
+  end = clock();
+  printf("start\tworld gen\tfile place\tthread time\n");
+  printf("%f\t%f\t%f\t%f\n",(((double)(end-start))/CLOCKS_PER_SEC), (((double)(world_gen-start))/CLOCKS_PER_SEC)
+                            , (((double)(file_time-world_gen))/CLOCKS_PER_SEC), (((double)(end-file_time))/CLOCKS_PER_SEC));
   return 0;
 }
+UNITS convertx(UNITS x){
+  UNITS new_x = x;
 
-void mpNextGen(){
+  if(x < 0){
+    new_x = rows - 1;
+  }
+  else if(x >= rows){
+    new_x = 0;
+  }
+  return new_x;
+}
+
+UNITS converty(UNITS y){
+  UNITS new_y = y;
+
+  if(y < 0){
+    new_y = cols - 1;
+  }
+  else if(y >= cols){
+    new_y = 0;
+  }
+  return new_y;
+}
+
+void mpNextGen(void){
   //printf("in method\n");
   #pragma omp parallel
     {
       int ID = omp_get_thread_num();
-      int i,x,y,neigh;
+      int i,neigh;
+      UNITS x,y;
       for(i = 0; i < ticks; i++){
         #pragma omp single
         {
@@ -145,7 +183,7 @@ void mpNextGen(){
 }
 
 
-void init(){
+void init(void){
 
   cells = malloc(SIZE);
   if(cells == NULL){
@@ -162,7 +200,7 @@ void init(){
   //displaycells();
 }
 
-int neighbours(int x, int y){
+int neighbours(UNITS x, UNITS y){
   int count = 0;
   if(y < (cols -1)){
     //printf("count 1\n");
@@ -199,21 +237,21 @@ int neighbours(int x, int y){
   return count;
 }
 
-void freecells(){
+void freecells(void){
   printf("free\n");
   free(cells);
   free(temp);
 
 }
 
-void displaycells(){
-  int i,j;
+void displaycells(void){
+  UNITS i,j;
   for (i = 0; i < rows; i++) {
           //printf("%i: ", i);
           for (j = 0; j < cols; j++) {
             if(Verbose > 1 ){
               if (getcell(i,j) != 0 && getcell(i,j) != 1) {
-                  fprintf(stderr, "there is a corruption at %i %i\n", i, j);
+                  fprintf(stderr, "there is a corruption at %li %li\n", i, j);
               }
               }
               
@@ -224,25 +262,25 @@ void displaycells(){
       printf("\n");
 }
 
-int coord(int x, int y){
+UNITS coord(UNITS x, UNITS y){
   return ((y)*cols+(x));
 }
-void setcellAlive(int x,int y){
+void setcellAlive(UNITS x,UNITS y){
   (cells[coord((x),(y))] = 1);
   //printf("cell x %i y %i is alive\n", x, y);
   //displaycells();
 }
-void setcellKill(int x, int y){
+void setcellKill(UNITS x, UNITS y){
   (cells[coord((x),(y))] = 0);
   //printf("cell x %i y %i is dead\n", x, y);
   //sdisplaycells();
 }
 
-void setcellAliveT(int x, int y){
+void setcellAliveT(UNITS x, UNITS y){
   (temp[coord((x),(y))] = 1);
 }
 
-void setcellKillT(int x, int y){
+void setcellKillT(UNITS x, UNITS y){
   (temp[coord((x),(y))] = 0);
 }
 
@@ -250,17 +288,17 @@ void copyCells(void){
   memcpy(temp, cells, SIZE);
 }
 
-void copyTemp(){
+void copyTemp(void){
   //printf("hello\n");
   memcpy(cells,temp,SIZE);
 }
 
 
-int getcell(int x, int y){
+int getcell(UNITS x, UNITS y){
   return (cells[coord(x,y)]);
 }
 
-int checkAlive(int x, int y){
+int checkAlive(UNITS x, UNITS y){
   if(getcell(x,y) == 1){
     return true;
   }
@@ -269,31 +307,7 @@ int checkAlive(int x, int y){
   }
 }
 
-int convertx(int x){
-  int new_x = x;
-
-  if(x < 0){
-    new_x = rows - 1;
-  }
-  else if(x >= rows){
-    new_x = 0;
-  }
-  return new_x;
-}
-
-int converty(int y){
-  int new_y = y;
-
-  if(y < 0){
-    new_y = cols - 1;
-  }
-  else if(y >= cols){
-    new_y = 0;
-  }
-  return new_y;
-}
-
-void load_file(char* file, int x, int y){
+void load_file(char* file, UNITS x, UNITS y){
   /*
   if(!created){
    printf("creating world\n");
@@ -317,8 +331,8 @@ void load_file(char* file, int x, int y){
   }
   else{
    // printf("in else\n");
-    int curx = x;
-    int cury = y;
+    UNITS curx = x;
+    UNITS cury = y;
 
     while(fgets(str, sizeof(str),iFile) != NULL){
       //printf("loop\n");

@@ -1,6 +1,8 @@
 CC = gcc
-CFLAGS = -g -pthread
-CFLAGSMP = -g -fopenmp
+CFLAGS = -g -pthread -Wall -Wshadow -Wunreachable-code -Wredundant-decls \
+        -Wmissing-declarations -Wold-style-definition -Wmissing-prototypes \
+        -Wdeclaration-after-statement -std=c99 -D_XOPEN_SOURCE=600
+CFLAGSMP = -fopenmp
 PROG = life
 PROG2 = lifemp
 
@@ -14,11 +16,11 @@ life.o: life.c const.h life.h
 	$(CC) $(CFLAGS) -c life.c
 
 lifemp: lifemp.o
-	$(CC) $(CFLAGSMP) -o mplife lifemp.o
+	$(CC) $(CFLAGSMP) $(CFLAGS) -o mplife lifemp.o
 	chmod a+rx mplife
 
 lifemp.o: lifemp.c const.h lifemp.h
-	$(CC) $(CFLAGSMP) -c lifemp.c
+	$(CC) $(CFLAGSMP) $(CFLAGS) -c lifemp.c
 
 clean:
-	rm -f $(PROG) $(PROG2) *.o *~ \#*
+	rm -f $(PROG) mplife *.o *~ \#*
