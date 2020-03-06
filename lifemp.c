@@ -15,6 +15,8 @@ UNITS rows = 0;
 
 int NUM_THREADS;
 
+int loop = false;
+
 UNITS CELLCOUNT;
 UNITS SIZE;
 int Verbose = 0;
@@ -45,7 +47,7 @@ int main(int argc, char *argv[]){
   int j;
   struct shapefile filearray[10];
   start = clock();
-  while((opt = getopt(argc, argv, "c:r:t:n:x:y:f:v")) != -1 ){
+  while((opt = getopt(argc, argv, "c:r:t:n:x:y:f:vl")) != -1 ){
       switch(opt){
         case'c':
           cols = strtol(optarg, NULL,10);
@@ -77,6 +79,9 @@ int main(int argc, char *argv[]){
         case 'v':
           Verbose ++;
           break;
+        case 'l':
+          loop = true;
+          break;
           }
   }
   if(Verbose > 0){
@@ -102,7 +107,18 @@ int main(int argc, char *argv[]){
   //printf("seting numbers\n");
   omp_set_num_threads(NUM_THREADS);
   //printf("entering method\n");
-  mpNextGen();
+  if(loop){
+    if(Verbose > 0){
+       printf("doing for loop\n");
+    }
+   
+    mpNextGenFor();
+  }else{
+    if(Verbose > 0){
+      printf("doing normal threading\n");
+    }
+    mpNextGen();
+  }
   end = clock();
   printf("start\tworld gen\tfile place\tthread time\n");
   printf("%f\t%f\t%f\t%f\n",(((double)(end-start))/CLOCKS_PER_SEC), (((double)(world_gen-start))/CLOCKS_PER_SEC)
@@ -133,6 +149,54 @@ UNITS converty(UNITS y){
   return new_y;
 }
 
+void mpNextGenFor(void){
+  #pragma omp parallel
+    {
+      int i,neigh;
+      UNITS x,y;
+      for(i = 0; i < ticks; i++){
+        #pragma omp single
+        {
+          //printf("copyC");
+          copyCells();
+        }
+        //printf("%i waiting",ID);
+        #pragma omp barrier
+        #pragma omp for
+          for(x = 0; x < rows; x ++){
+            //printf("1\n");
+            for(y = 0; y < cols; y++){
+              neigh = neighbours(x,y);
+              //printf("2\n");
+              if(neigh < 2 || neigh > 3){
+                //printf("3\n");
+                setcellKillT(x,y);
+                
+              }
+              if(neigh == 3){
+              // printf("4\n");
+                setcellAliveT(x,y);
+                
+              }
+            }
+          }
+        //printf("5\n");
+        #pragma omp barrier
+        #pragma omp single
+        {
+          //printf("6\n");
+          copyTemp();
+          if(Verbose > 0){
+            displaycells();
+          }
+        }
+        //printf("7\n");
+      }
+      //printf("8\n");
+  }
+  //printf("9\n");
+}
+
 void mpNextGen(void){
   //printf("in method\n");
   #pragma omp parallel
@@ -148,6 +212,7 @@ void mpNextGen(void){
         }
         //printf("%i waiting",ID);
         #pragma omp barrier
+      
         for(x = ID; x < rows; x += NUM_THREADS){
           //printf("1\n");
           for(y = 0; y < cols; y++){
@@ -159,7 +224,7 @@ void mpNextGen(void){
               
             }
             if(neigh == 3){
-             // printf("4\n");
+            // printf("4\n");
               setcellAliveT(x,y);
               
             }

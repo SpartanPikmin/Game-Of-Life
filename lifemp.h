@@ -32,6 +32,7 @@ int getcell(UNITS x, UNITS y);
 int checkAlive(UNITS x, UNITS y);
 void init(void);
 void freecells(void);
+void mpNextGenFor(void);
 int neighbours(UNITS x, UNITS y);
 
 

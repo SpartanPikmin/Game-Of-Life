@@ -16,6 +16,7 @@ static CELL *cells = NULL;
 static CELL *temp = NULL;
 
 int ticks = 1;
+int loop = false;
 
 int created = false;
 
@@ -54,7 +55,7 @@ int main(int argc, char *argv[]){
   int j;
   struct shapefile filearray[10];
   start = clock();
-  while((opt = getopt(argc, argv, "c:r:t:n:x:y:f:v")) != -1 ){
+  while((opt = getopt(argc, argv, "c:r:t:n:x:y:f:vl")) != -1 ){
       switch(opt){
         case'c':
           cols = strtol(optarg, NULL,10);
@@ -85,6 +86,9 @@ int main(int argc, char *argv[]){
           break;
         case 'v':
           Verbose ++;
+          break;
+        case 'l':
+          loop = true;
           break;
           }
   }
@@ -141,44 +145,52 @@ int main(int argc, char *argv[]){
     }
     */
   //NUM_THREADS = 10; //atoi(argv[1]);
-  {
-  pthread_t threads[NUM_THREADS];
-  int i;
-  int ids[NUM_THREADS];
-
-  //thread_time = clock();
-  memset(ids, 0, NUM_THREADS * sizeof(pthread_t));
-  pthread_barrier_init(&barrier, NULL, NUM_THREADS);
-
-  //  pthread_attr_init(&attr);
-  //pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-
-  for (i = 0; i < NUM_THREADS; i++) {
-    ids[i] = i;
-    pthread_create(&threads[i], NULL, threadNextGen, &ids[i]);
+  if(loop){
+    if(Verbose > 0){
+      printf("in serial code\n");
+    }
+    nextGeneration();
   }
-  for(i = 0; i < NUM_THREADS; i ++){
-    pthread_join(threads[i],NULL);
-   // printf("joined %i\n", i);
-  }
-  
+  else{
+    {
+      int i;
+      int ids[NUM_THREADS];
+      pthread_t threads[NUM_THREADS];
 
-  //printf("test\n");
+      if(Verbose > 0){
+        printf("in thread code\n");
+      }
+      //thread_time = clock();
+      memset(ids, 0, NUM_THREADS * sizeof(pthread_t));
+      pthread_barrier_init(&barrier, NULL, NUM_THREADS);
+
+      //  pthread_attr_init(&attr);
+      //pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+      for (i = 0; i < NUM_THREADS; i++) {
+        ids[i] = i;
+        pthread_create(&threads[i], NULL, threadNextGen, &ids[i]);
+      }
+      for(i = 0; i < NUM_THREADS; i ++){
+        pthread_join(threads[i],NULL);
+      // printf("joined %i\n", i);
+      }
+      
+
+      //printf("test\n");
+      freecells();
+      end = clock();
+      printf("start\tworld gen\tfile place\tthread time\n");
+      printf("%f\t%f\t%f\t%f\n",(((double)(end-start))/CLOCKS_PER_SEC), (((double)(world_gen-start))/CLOCKS_PER_SEC)
+                                , (((double)(file_time-world_gen))/CLOCKS_PER_SEC), (((double)(end-file_time))/CLOCKS_PER_SEC));
+      pthread_exit(EXIT_SUCCESS);
+    }
+  }
   freecells();
   end = clock();
   printf("start\tworld gen\tfile place\tthread time\n");
-  printf("%f\t%f\t%f\t%f\n",(((double)(end-start))/CLOCKS_PER_SEC), (((double)(world_gen-start))/CLOCKS_PER_SEC)
-                            , (((double)(file_time-world_gen))/CLOCKS_PER_SEC), (((double)(end-file_time))/CLOCKS_PER_SEC));
-  pthread_exit(EXIT_SUCCESS);
-  }
-
-  //printf("hello world\n");
-  /*
-  end = clock();
-  printf("start\tworld gen\tfile place\tthread time\n");
-  printf("%f\t%f\t%f\t%f\n",(((double)(start - end))/CLOCKS_PER_SEC), (((double)(world_gen - end))/CLOCKS_PER_SEC)
-                            , (((double)(file_time - end))/CLOCKS_PER_SEC), (((double)(thread_time - end))/CLOCKS_PER_SEC));
-  */
+      printf("%f\t%f\t%f\t%f\n",(((double)(end-start))/CLOCKS_PER_SEC), (((double)(world_gen-start))/CLOCKS_PER_SEC)
+                                , (((double)(file_time-world_gen))/CLOCKS_PER_SEC), (((double)(end-file_time))/CLOCKS_PER_SEC));
   return 0;
 }
 
@@ -338,25 +350,30 @@ int neighbours(long x, long y){
 }
 
 void nextGeneration(void){
-  long x,y;
+  long x,y,j;
   int neigh;
 
-  copyCells();
-  for(x = 0; x < rows; x++){
-    for(y = 0; y < cols; y++){
-      neigh = neighbours(x,y);
+  for(j=0;j<ticks;j++){
+    copyCells();
+    for(x = 0; x < rows; x++){
+      for(y = 0; y < cols; y++){
+        neigh = neighbours(x,y);
 
-      if(neigh < 2 || neigh > 3){
-        //printf("%i,%i,kill\n",x,y);
-        setcellKillT(x,y);
-      }
-      if(neigh == 3){
-        //printf("%i,%i,alive\n",x,y);
-        setcellAliveT(x,y);
+        if(neigh < 2 || neigh > 3){
+          //printf("%i,%i,kill\n",x,y);
+          setcellKillT(x,y);
+        }
+        if(neigh == 3){
+          //printf("%i,%i,alive\n",x,y);
+          setcellAliveT(x,y);
+        }
       }
     }
+    copyTemp();
+    if(Verbose > 0){
+      displaycells();
+    }
   }
-  copyTemp();
 }
 
 void testGen(void){
