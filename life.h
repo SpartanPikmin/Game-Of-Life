@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <getopt.h>
+#include <sys/time.h>   
+#include <sys/resource.h> 
 #include "const.h"
 
 long coord(long x, long y);

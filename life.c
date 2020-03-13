@@ -23,13 +23,13 @@ int created = false;
 long cols = 0;
 long rows = 0;
 
-int NUM_THREADS;
+long NUM_THREADS;
 
 unsigned long CELLCOUNT;
 unsigned long SIZE;
 int Verbose = 0;
 
-clock_t start, world_gen,file_time, end;
+//clock_t start, world_gen,file_time, end;
   
 struct shapefile{
   char *fileName;
@@ -49,12 +49,13 @@ struct shapefile{
 
 int main(int argc, char *argv[]){
   int opt;
+  struct timespec start, finish; 
   int file_loc = 0;
   int fx = 0, fy = 0;
   char *file = NULL;
   int j;
   struct shapefile filearray[10];
-  start = clock();
+  clock_gettime(CLOCK_REALTIME, &start); 
   while((opt = getopt(argc, argv, "c:r:t:n:x:y:f:vl")) != -1 ){
       switch(opt){
         case'c':
@@ -98,8 +99,8 @@ int main(int argc, char *argv[]){
   CELLCOUNT = ((long)cols * (long)rows);
   SIZE = (CELLCOUNT * sizeof(CELL));
   if(Verbose > 1){
-    printf("cellcount %lu size %li %lu rows %li cols %li, sizeof cell %lu\n"
-    , CELLCOUNT, (rows * cols) ,SIZE, rows, cols, (unsigned long) sizeof(CELL));
+    printf("cellcount %lu size %li %lu rows %li cols %li, sizeof cell %lu, num of threads: %lu\n"
+    , CELLCOUNT, (rows * cols) ,SIZE, rows, cols, (unsigned long) sizeof(CELL), NUM_THREADS);
   }
   
 
@@ -112,14 +113,14 @@ int main(int argc, char *argv[]){
       }
       
       init();
-      world_gen = clock();
+      //world_gen = clock();
     for(j = 0; j < file_loc; j++){
       if(Verbose > 1){
         printf("loading file at location %i\n", j);
       }
       load_file(filearray[j].fileName,filearray[j].x,filearray[j].y);
     }
-    file_time = clock();
+    //file_time = clock();
 
     //displaycells();
     //printf("serial code\n");
@@ -153,8 +154,8 @@ int main(int argc, char *argv[]){
   }
   else{
     {
-      int i;
-      int ids[NUM_THREADS];
+      long i;
+      long ids[NUM_THREADS];
       pthread_t threads[NUM_THREADS];
 
       if(Verbose > 0){
@@ -168,8 +169,17 @@ int main(int argc, char *argv[]){
       //pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
       for (i = 0; i < NUM_THREADS; i++) {
+        if(Verbose > 3){
+          printf("i %lu\n", i);
+        }
         ids[i] = i;
+        if(Verbose > 3){
+          printf("i %lu\n", i);
+        }
         pthread_create(&threads[i], NULL, threadNextGen, &ids[i]);
+      }
+      if(Verbose > 3){
+        printf("joining\n");
       }
       for(i = 0; i < NUM_THREADS; i ++){
         pthread_join(threads[i],NULL);
@@ -179,18 +189,16 @@ int main(int argc, char *argv[]){
 
       //printf("test\n");
       freecells();
-      end = clock();
-      printf("start\tworld gen\tfile place\tthread time\n");
-      printf("%f\t%f\t%f\t%f\n",(((double)(end-start))/CLOCKS_PER_SEC), (((double)(world_gen-start))/CLOCKS_PER_SEC)
-                                , (((double)(file_time-world_gen))/CLOCKS_PER_SEC), (((double)(end-file_time))/CLOCKS_PER_SEC));
+      clock_gettime(CLOCK_REALTIME, &finish); 
+      printf("total time\t Number of threads: %lu\t number of ticks: %i\tthread version\n", NUM_THREADS, ticks);
+      printf("%ld\t\n",((finish.tv_sec-start.tv_sec)));
       pthread_exit(EXIT_SUCCESS);
     }
   }
   freecells();
-  end = clock();
-  printf("start\tworld gen\tfile place\tthread time\n");
-      printf("%f\t%f\t%f\t%f\n",(((double)(end-start))/CLOCKS_PER_SEC), (((double)(world_gen-start))/CLOCKS_PER_SEC)
-                                , (((double)(file_time-world_gen))/CLOCKS_PER_SEC), (((double)(end-file_time))/CLOCKS_PER_SEC));
+  clock_gettime(CLOCK_REALTIME, &finish); 
+  printf("total time\t Number of threads: %lu\t number of ticks: %i\tthread version\n", NUM_THREADS, ticks);
+  printf("%ld\t\n",((finish.tv_sec-start.tv_sec)));
   return 0;
 }
 
@@ -433,7 +441,7 @@ void *threadNextGen(void *a){
     if(id == 0){
       
       copyTemp();
-      if(Verbose > 0){
+      if(Verbose > 100){
         displaycells();
       }
       

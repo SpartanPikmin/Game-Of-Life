@@ -8,6 +8,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <omp.h>
+#include <sys/time.h>   
+#include <sys/resource.h> 
 
 #include "const.h"
 

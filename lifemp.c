@@ -21,7 +21,7 @@ UNITS CELLCOUNT;
 UNITS SIZE;
 int Verbose = 0;
 
-clock_t start, world_gen,file_time, end;
+//clock_t start, world_gen,file_time, end;
   
 struct shapefile{
   char *fileName;
@@ -45,8 +45,9 @@ int main(int argc, char *argv[]){
   int fx = 0, fy = 0;
   char *file = NULL;
   int j;
+  struct timespec start, finish; 
   struct shapefile filearray[10];
-  start = clock();
+  clock_gettime(CLOCK_REALTIME, &start); 
   while((opt = getopt(argc, argv, "c:r:t:n:x:y:f:vl")) != -1 ){
       switch(opt){
         case'c':
@@ -94,14 +95,12 @@ int main(int argc, char *argv[]){
     printf("creating world\n");
     }   
   init();
-  world_gen = clock();
   for(j = 0; j < file_loc; j++){
     if(Verbose > 1){
       printf("loading file at location %i\n", j);
     } 
     load_file(filearray[j].fileName,filearray[j].x,filearray[j].y);
   }
-  file_time = clock();
   //displaycells();
 
   //printf("seting numbers\n");
@@ -119,10 +118,9 @@ int main(int argc, char *argv[]){
     }
     mpNextGen();
   }
-  end = clock();
-  printf("start\tworld gen\tfile place\tthread time\n");
-  printf("%f\t%f\t%f\t%f\n",(((double)(end-start))/CLOCKS_PER_SEC), (((double)(world_gen-start))/CLOCKS_PER_SEC)
-                            , (((double)(file_time-world_gen))/CLOCKS_PER_SEC), (((double)(end-file_time))/CLOCKS_PER_SEC));
+  clock_gettime(CLOCK_REALTIME, &finish); 
+  printf("total time\tNumber of threads: %i\t number of ticks: %i\topenmp version\n", NUM_THREADS, ticks);
+  printf("%ld\t\n",((finish.tv_sec-start.tv_sec)));
   return 0;
 }
 UNITS convertx(UNITS x){
